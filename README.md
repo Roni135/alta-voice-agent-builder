@@ -13,14 +13,20 @@ persona and Vapi as the runtime that executes it.
 
 ## User Journey
 
-1. User describes the assistant they want, in plain language
-2. The Builder asks clarifying questions — consultant-style, only for what's missing
-3. The assistant is created and synced to the voice runtime automatically (no separate "publish" step)
-4. The user sees a reveal screen — their Voice AI Assistant as a profile card, status "Ready for Voice Session"
-5. The user can keep talking to the Builder to adjust it — the same profile updates in place
-6. The user starts a voice session (browser call, or a real phone call)
-7. The assistant has the qualification conversation and, if the lead qualifies, books a meeting
-8. The user reviews the outcome: qualified?, meeting booked?, full transcript
+1. The app always opens to a fresh Builder chat by default — it doesn't assume you want to keep editing whatever you built last
+2. User describes the assistant they want, in plain language
+3. The Builder asks clarifying questions — consultant-style, only for what's missing
+4. The assistant is created and synced to the voice runtime automatically (no separate "publish" step)
+5. The user sees a reveal screen — their Voice AI Assistant as a profile card, status "Ready for Voice Session"
+6. The user can keep talking to the Builder to adjust it — the same profile updates in place
+7. The user starts a voice session (browser call, or a real phone call)
+8. The assistant has the qualification conversation and, if the lead qualifies, books a meeting
+9. The user reviews the outcome: qualified?, meeting booked?, full transcript
+
+A sidebar lists every assistant built so far (Postgres-backed, not just
+browser state) — click one to reopen its profile and continue editing it,
+or click **"+ New Agent"** to start a completely separate one. Building
+multiple assistants doesn't overwrite or lose previous ones.
 
 ## Architecture
 
@@ -38,12 +44,14 @@ Organized as a modular monolith — one deployable app, internally separated by 
 
 ```
 app/                        # Next.js routes + pages (App Router)
+  api/agents                  # List built assistants (sidebar)
+  api/agents/[id]               # Fetch one assistant + its chat history
   api/builder                 # Builder Agent endpoint (clarify / create / update)
   api/calls/start              # Places a real outbound phone call
   api/calls/register           # Registers a browser (Web Call) session
   api/calls/[id]                # Poll a call's status/result
   api/webhooks/vapi            # Receives tool-calls (booking) + end-of-call-report
-components/                 # The 4 screens: BuilderChat, AssistantProfile, TestCallPanel, CallResult
+components/                 # AgentSidebar + the 4 screens: BuilderChat, AssistantProfile, TestCallPanel, CallResult
 modules/
   builder/                    # Consultant-style prompt + structured-output schema
   agents/                      # Persona schema, repository (Postgres), persona -> Vapi payload mapper

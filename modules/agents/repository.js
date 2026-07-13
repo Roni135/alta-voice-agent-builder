@@ -73,8 +73,19 @@ export async function getAgent(id) {
   return rowToAgent(rows[0]);
 }
 
-export async function getLatestAgent() {
+// Lightweight list for the sidebar — not the full persona, just enough to
+// label each entry and let the user pick one to open.
+export async function listAgents() {
   await ensureSchema();
-  const rows = await sql`SELECT * FROM agents ORDER BY updated_at DESC LIMIT 1`;
-  return rowToAgent(rows[0]);
+  const rows = await sql`
+    SELECT id, name, role, company_name, sync_status
+    FROM agents ORDER BY updated_at DESC
+  `;
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    companyName: row.company_name,
+    syncStatus: row.sync_status,
+  }));
 }

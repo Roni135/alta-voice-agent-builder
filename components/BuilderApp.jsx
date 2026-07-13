@@ -1,39 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import AgentSidebar from './AgentSidebar';
 import BuilderChat from './BuilderChat';
 import AssistantProfile from './AssistantProfile';
 import TestCallPanel from './TestCallPanel';
 import CallResult from './CallResult';
 
 // Orchestrates the 4-screen User Journey: Builder Chat -> Assistant Profile
-// (reveal) -> Test Call -> Call Result. One page, no routing, so "Edit in
-// chat" can return to the same conversation without losing state.
+// (reveal) -> Test Call -> Call Result, plus a sidebar for switching between
+// or starting new Voice AI Assistants. The URL always opens to a fresh chat
+// by default — Postgres remembers everything, but landing on a past agent
+// automatically would hijack "start something new" as the default action.
 export default function BuilderApp() {
   const [screen, setScreen] = useState('chat');
   const [messages, setMessages] = useState([]);
   const [agent, setAgent] = useState(null);
   const [call, setCall] = useState(null);
-  const [resuming, setResuming] = useState(true);
-
-  // Browser state alone doesn't survive a refresh — Postgres is the source
-  // of truth, so reconnect the UI to whatever was most recently built.
-  useEffect(() => {
-    fetch('/api/agents/latest')
-      .then((res) => res.json())
-      .then(({ agent: latestAgent, history }) => {
-        if (latestAgent) {
-          setAgent(latestAgent);
-          setMessages(history);
-          setScreen('profile');
-        }
-      })
-      .finally(() => setResuming(false));
-  }, []);
+  const [sidebarVersion, setSidebarVersion] = useState(0);
 
   function handleAgentReady(nextAgent) {
     setAgent(nextAgent);
     setScreen('profile');
+    setSidebarVersion((v) => v + 1);
   }
 
   function handleCallCompleted(finishedCall) {
@@ -41,45 +30,69 @@ export default function BuilderApp() {
     setScreen('result');
   }
 
-  if (resuming) return null;
+  function handleNewAgent() {
+    setAgent(null);
+    setMessages([]);
+    setCall(null);
+    setScreen('chat');
+  }
+
+  async function handleSelectAgent(agentId) {
+    const res = await fetch(`/api/agents/${agentId}`);
+    if (!res.ok) return;
+    const { agent: selected, history } = await res.json();
+    setAgent(selected);
+    setMessages(history);
+    setCall(null);
+    setScreen('profile');
+  }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold text-zinc-900">Voice AI Assistant Builder</h1>
-      </header>
+    <div className="mx-auto flex min-h-screen w-full max-w-4xl gap-6 px-4 py-8">
+      <AgentSidebar
+        selectedAgentId={agent?.id}
+        refreshSignal={sidebarVersion}
+        onSelect={handleSelectAgent}
+        onNew={handleNewAgent}
+      />
 
-      {screen === 'chat' && (
-        <BuilderChat
-          agent={agent}
-          messages={messages}
-          setMessages={setMessages}
-          onAgentReady={handleAgentReady}
-        />
-      )}
+      <div className="flex flex-1 flex-col">
+        <header className="mb-6">
+          <h1 className="text-xl font-semibold text-zinc-900">Voice AI Assistant Builder</h1>
+        </header>
 
-      {screen === 'profile' && agent && (
-        <AssistantProfile
-          agent={agent}
-          onEditInChat={() => setScreen('chat')}
-          onTestCall={() => setScreen('test-call')}
-        />
-      )}
+        {screen === 'chat' && (
+          <BuilderChat
+            agent={agent}
+            messages={messages}
+            setMessages={setMessages}
+            onAgentReady={handleAgentReady}
+          />
+        )}
 
-      {screen === 'test-call' && agent && (
-        <TestCallPanel
-          agent={agent}
-          onBack={() => setScreen('profile')}
-          onCallCompleted={handleCallCompleted}
-        />
-      )}
+        {screen === 'profile' && agent && (
+          <AssistantProfile
+            agent={agent}
+            onEditInChat={() => setScreen('chat')}
+            onTestCall={() => setScreen('test-call')}
+          />
+        )}
 
-      {screen === 'result' && call && (
-        <CallResult
-          call={call}
-          onDone={() => setScreen('profile')}
-        />
-      )}
+        {screen === 'test-call' && agent && (
+          <TestCallPanel
+            agent={agent}
+            onBack={() => setScreen('profile')}
+            onCallCompleted={handleCallCompleted}
+          />
+        )}
+
+        {screen === 'result' && call && (
+          <CallResult
+            call={call}
+            onDone={() => setScreen('profile')}
+          />
+        )}
+      </div>
     </div>
   );
 }
