@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import BuilderChat from './BuilderChat';
 import AssistantProfile from './AssistantProfile';
 import TestCallPanel from './TestCallPanel';
@@ -14,6 +14,22 @@ export default function BuilderApp() {
   const [messages, setMessages] = useState([]);
   const [agent, setAgent] = useState(null);
   const [call, setCall] = useState(null);
+  const [resuming, setResuming] = useState(true);
+
+  // Browser state alone doesn't survive a refresh — Postgres is the source
+  // of truth, so reconnect the UI to whatever was most recently built.
+  useEffect(() => {
+    fetch('/api/agents/latest')
+      .then((res) => res.json())
+      .then(({ agent: latestAgent, history }) => {
+        if (latestAgent) {
+          setAgent(latestAgent);
+          setMessages(history);
+          setScreen('profile');
+        }
+      })
+      .finally(() => setResuming(false));
+  }, []);
 
   function handleAgentReady(nextAgent) {
     setAgent(nextAgent);
@@ -24,6 +40,8 @@ export default function BuilderApp() {
     setCall(finishedCall);
     setScreen('result');
   }
+
+  if (resuming) return null;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-8">
