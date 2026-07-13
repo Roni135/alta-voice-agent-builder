@@ -77,12 +77,27 @@ export async function POST(request) {
   const body = await request.json();
   const message = body.message;
 
-  if (message?.type === 'tool-calls') {
-    return handleToolCalls(message);
-  }
-  if (message?.type === 'end-of-call-report') {
-    return handleEndOfCallReport(message);
-  }
+  try {
+    if (message?.type === 'tool-calls') {
+      return await handleToolCalls(message);
+    }
+    if (message?.type === 'end-of-call-report') {
+      return await handleEndOfCallReport(message);
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    // Logged so a real failure is diagnosable in Vercel's Runtime Logs
+    // instead of just showing up as the assistant improvising an excuse
+    // mid-call with no visibility into why.
+    console.error(`[vapi webhook] error handling "${message?.type}"`, err);
 
-  return NextResponse.json({ ok: true });
+    if (message?.type === 'tool-calls') {
+      const results = (message.toolCallList ?? []).map((toolCall) => ({
+        toolCallId: toolCall.id,
+        result: 'Something went wrong on our end — please try again in a moment.',
+      }));
+      return NextResponse.json({ results });
+    }
+    return NextResponse.json({ ok: true });
+  }
 }

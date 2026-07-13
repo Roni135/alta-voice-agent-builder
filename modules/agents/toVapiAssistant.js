@@ -65,6 +65,11 @@ const BOOK_MEETING_TOOL = {
       },
     },
   },
+  // Generous headroom above Vapi's own 20s default — our webhook hits a
+  // serverless function backed by a free-tier Postgres instance, both of
+  // which can have a real cold-start delay on the first request after a
+  // period of inactivity.
+  server: { timeoutSeconds: 30 },
 };
 
 // Vapi's default structured-data extraction prompt only sees the transcript
