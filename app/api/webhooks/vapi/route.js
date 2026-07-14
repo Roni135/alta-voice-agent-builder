@@ -16,6 +16,26 @@ function formatSlotsForVoice(slots) {
   return slots.slice(0, 3).map((iso, i) => `Option ${i + 1}: ${formatSlot(iso)}`).join('. ');
 }
 
+// The model does not reliably follow the tool schema — confirmed live, it
+// sent a hand-constructed `{ slot }` with the correct hour but the wrong
+// year instead of the requested `{ option }` index. Rather than fight
+// prompting further, resolve defensively: prefer an explicit option index,
+// but if a free-form `slot` shows up instead, trust only its hour (which
+// has been consistently correct) and match it to one of the real slots we
+// actually offered — never the model's own constructed date.
+function resolveChosenSlot(args, slots) {
+  const optionIndex = Number(args.option) - 1;
+  if (Number.isInteger(optionIndex) && optionIndex >= 0 && optionIndex <= 2) {
+    return slots[optionIndex];
+  }
+  if (args.slot) {
+    const hour = new Date(args.slot).getHours();
+    const match = slots.find((iso) => new Date(iso).getHours() === hour);
+    if (match) return match;
+  }
+  return null;
+}
+
 async function handleToolCalls(message) {
   const call = await getCallByVapiCallId(message.call?.id);
   const results = [];
@@ -30,18 +50,10 @@ async function handleToolCalls(message) {
     const rawArgs = toolCall.function.arguments;
     const args = typeof rawArgs === 'string' ? JSON.parse(rawArgs || '{}') : (rawArgs ?? {});
 
-    // The model picks a numbered option instead of constructing its own
-    // ISO date/time — this is what fixes a real bug where the assistant
-    // spoke one date but stored a different one, having miscalculated it.
     const slots = getAvailableSlots();
-    const optionIndex = Number(args.option) - 1;
+    const chosenSlot = resolveChosenSlot(args, slots);
 
-    // Temporary — this is diagnosing a live bug where the assistant never
-    // seems to send a value that resolves to a valid option (1/2/3), and no
-    // exception is thrown either, so the raw payload is otherwise invisible.
-    console.log('[vapi webhook] bookMeeting raw args:', JSON.stringify(rawArgs), 'parsed:', JSON.stringify(args), 'optionIndex:', optionIndex);
-
-    if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex > 2) {
+    if (!chosenSlot) {
       results.push({
         toolCallId: toolCall.id,
         result: `Available times. ${formatSlotsForVoice(slots)}. Ask the lead to pick one and call bookMeeting again with that option number (1, 2, or 3).`,
@@ -54,7 +66,6 @@ async function handleToolCalls(message) {
       continue;
     }
 
-    const chosenSlot = slots[optionIndex];
     await bookSlot(call.id, chosenSlot);
     results.push({
       toolCallId: toolCall.id,
