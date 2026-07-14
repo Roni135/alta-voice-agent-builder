@@ -73,6 +73,16 @@ export async function getAgent(id) {
   return rowToAgent(rows[0]);
 }
 
+// Doesn't remove the assistant on the Vapi side — leaving an orphaned
+// assistant there is harmless (no cost, not visible in this app), and
+// isn't worth the extra API call for a demo-scope delete action.
+export async function deleteAgent(id) {
+  await ensureSchema();
+  await sql`DELETE FROM calls WHERE agent_id = ${id}`;
+  await sql`DELETE FROM builder_messages WHERE agent_id = ${id}`;
+  await sql`DELETE FROM agents WHERE id = ${id}`;
+}
+
 // Lightweight list for the sidebar — not the full persona, just enough to
 // label each entry and let the user pick one to open.
 export async function listAgents() {

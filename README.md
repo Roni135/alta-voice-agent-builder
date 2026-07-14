@@ -25,8 +25,9 @@ persona and Vapi as the runtime that executes it.
 
 A sidebar lists every assistant built so far (Postgres-backed, not just
 browser state) — click one to reopen its profile and continue editing it,
-or click **"+ New Agent"** to start a completely separate one. Building
-multiple assistants doesn't overwrite or lose previous ones.
+click **"+ New Agent"** to start a completely separate one, or delete one
+you no longer need. Building multiple assistants doesn't overwrite or lose
+previous ones.
 
 ## Architecture
 
@@ -105,6 +106,7 @@ creating the assistant.
 - **No agent versioning/diff** — editing an assistant overwrites its persona in place.
 - **No "publish" step** — creating/updating an assistant syncs to the voice runtime automatically, in the same request. Sync status (`ready`/`failed`) is shown on the profile card instead.
 - **Free Vapi numbers can't place international calls** (confirmed while testing against an Israeli number) — the Voice Session screen defaults to a **browser call** (Vapi Web Call, WebRTC, no phone/carrier involved) and also offers a real phone-number option for domestic (US) numbers.
+- **The booking tool resolves numbered options, not free-hand dates.** An earlier version asked the assistant to construct the exact ISO datetime itself from whatever the lead said out loud — real testing caught it occasionally speaking one date but storing a different one (an LLM miscalculating a relative date mid-call). Fixed by having `bookMeeting` return up to 3 numbered options and asking the assistant to just echo back the number the lead picked, removing the date-arithmetic step entirely.
 
 ## Running locally
 

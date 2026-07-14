@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAgent } from '@/modules/agents/repository';
+import { getAgent, deleteAgent } from '@/modules/agents/repository';
 import { getHistory } from '@/modules/builder/messagesRepository';
 
 // Opens a specific Voice AI Assistant from the sidebar, with its chat
@@ -11,4 +11,10 @@ export async function GET(_request, { params }) {
 
   const history = await getHistory(id);
   return NextResponse.json({ agent, history });
+}
+
+export async function DELETE(_request, { params }) {
+  const { id } = await params;
+  await deleteAgent(id);
+  return NextResponse.json({ ok: true });
 }

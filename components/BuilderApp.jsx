@@ -54,6 +54,7 @@ export default function BuilderApp() {
         refreshSignal={sidebarVersion}
         onSelect={handleSelectAgent}
         onNew={handleNewAgent}
+        onDeleted={handleNewAgent}
       />
 
       <div className="flex flex-1 flex-col">

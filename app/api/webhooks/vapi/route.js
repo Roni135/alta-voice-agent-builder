@@ -2,19 +2,18 @@ import { NextResponse } from 'next/server';
 import { getCallByVapiCallId, updateCallResult } from '@/modules/calls/repository';
 import { getAvailableSlots, bookSlot } from '@/modules/booking/slots';
 
+function formatSlot(iso) {
+  return new Date(iso).toLocaleString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function formatSlotsForVoice(slots) {
-  return slots
-    .slice(0, 3)
-    .map((iso) =>
-      new Date(iso).toLocaleString('en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    )
-    .join(', ');
+  return slots.slice(0, 3).map((iso, i) => `Option ${i + 1}: ${formatSlot(iso)}`).join('. ');
 }
 
 async function handleToolCalls(message) {
@@ -31,11 +30,16 @@ async function handleToolCalls(message) {
     const rawArgs = toolCall.function.arguments;
     const args = typeof rawArgs === 'string' ? JSON.parse(rawArgs || '{}') : (rawArgs ?? {});
 
-    if (!args.slot) {
-      const slots = getAvailableSlots();
+    // The model picks a numbered option instead of constructing its own
+    // ISO date/time — this is what fixes a real bug where the assistant
+    // spoke one date but stored a different one, having miscalculated it.
+    const slots = getAvailableSlots();
+    const optionIndex = Number(args.option) - 1;
+
+    if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex > 2) {
       results.push({
         toolCallId: toolCall.id,
-        result: `Available times: ${formatSlotsForVoice(slots)}. Ask the lead to pick one and call bookMeeting again with that slot.`,
+        result: `Available times. ${formatSlotsForVoice(slots)}. Ask the lead to pick one and call bookMeeting again with that option number (1, 2, or 3).`,
       });
       continue;
     }
@@ -45,16 +49,11 @@ async function handleToolCalls(message) {
       continue;
     }
 
-    await bookSlot(call.id, args.slot);
+    const chosenSlot = slots[optionIndex];
+    await bookSlot(call.id, chosenSlot);
     results.push({
       toolCallId: toolCall.id,
-      result: `Booked for ${new Date(args.slot).toLocaleString('en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      })}. Let the lead know it's confirmed.`,
+      result: `Booked for ${formatSlot(chosenSlot)}. Let the lead know it's confirmed.`,
     });
   }
 

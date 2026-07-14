@@ -42,7 +42,7 @@ function buildSystemPrompt(persona) {
     `A lead is qualified when: ${persona.qualificationCriteria}`,
     '',
     persona.meetingEnabled
-      ? `If the lead is qualified, offer to book a ${persona.meetingDurationMinutes}-minute meeting using the bookMeeting tool. Call it first with no arguments to get available slots, read them to the lead, then call it again with the slot the lead picked.`
+      ? `If the lead is qualified, offer to book a ${persona.meetingDurationMinutes}-minute meeting using the bookMeeting tool. Call it first with no arguments — it returns up to 3 numbered options. Read those exact options to the lead (don't invent your own dates), then call it again with the option number (1, 2, or 3) they picked. Never construct a date/time yourself.`
       : 'Do not attempt to book a meeting on this call.',
     '',
     'Keep responses short and conversational — this is a phone call, not a chat.',
@@ -54,13 +54,16 @@ const BOOK_MEETING_TOOL = {
   function: {
     name: 'bookMeeting',
     description:
-      'Get available meeting slots (call with no arguments), or book one (call again with the chosen slot).',
+      'Get available meeting slots (call with no arguments) — returns up to 3 numbered options. ' +
+      'To book, call again with the option number (1, 2, or 3) the lead picked. Never pass a ' +
+      'hand-constructed date/time — always use the option number from the previous response.',
     parameters: {
       type: 'object',
       properties: {
-        slot: {
-          type: 'string',
-          description: 'The ISO datetime of the slot the lead chose. Omit to just list availability.',
+        option: {
+          type: 'integer',
+          enum: [1, 2, 3],
+          description: 'The number (1, 2, or 3) of the option the lead picked. Omit to just list availability.',
         },
       },
     },
