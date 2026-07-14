@@ -24,7 +24,12 @@ async function handleToolCalls(message) {
   for (const toolCall of message.toolCallList ?? []) {
     if (toolCall.function?.name !== 'bookMeeting') continue;
 
-    const args = JSON.parse(toolCall.function.arguments || '{}');
+    // Vapi's own types say `arguments` is always a JSON string, but the
+    // real production payload has been observed sending it as an
+    // already-parsed object — JSON.parse(anObject) coerces it to the
+    // string "[object Object]" first and then fails. Handle both shapes.
+    const rawArgs = toolCall.function.arguments;
+    const args = typeof rawArgs === 'string' ? JSON.parse(rawArgs || '{}') : (rawArgs ?? {});
 
     if (!args.slot) {
       const slots = getAvailableSlots();
