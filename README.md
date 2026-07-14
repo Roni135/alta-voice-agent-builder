@@ -30,13 +30,6 @@ click **"+ New Agent"** to start a completely separate one, or delete one
 you no longer need. Building multiple assistants doesn't overwrite or lose
 previous ones.
 
-Every call's transcript, summary, and qualification result is written to
-Postgres the moment it completes — but the first version only ever showed
-the one that just happened, with no way to look up a past lead afterward.
-**Call History** (from the profile screen) closes that gap: it lists every
-call an assistant has made, and opens any of them back into the same Call
-Result screen.
-
 ## Architecture
 
 ```
@@ -94,21 +87,10 @@ new file, not touching the Builder or the data model.
 | Layer | Choice | Why |
 |---|---|---|
 | App | Next.js (JavaScript, App Router) | One deployable app — UI + API routes together, no separate backend/CORS to manage. |
-| LLM (Builder) | OpenAI (`gpt-4o`), direct structured-output calls, no LangChain/LangGraph | The Builder's reasoning is one classification+extraction call per turn (`clarify`/`create`/`update`) — no multi-step tool loop or branching graph exists to orchestrate, so a framework would add abstraction without solving a real problem. (Considered and deliberately not used — see below.) |
+| LLM (Builder) | OpenAI (`gpt-4o`), direct structured-output calls, no orchestration framework | The Builder's reasoning is one classification+extraction call per turn (`clarify`/`create`/`update`) — no multi-step tool loop or branching graph to orchestrate. |
 | Voice | [Vapi](https://vapi.ai) | Assistant creation via API, outbound calling, custom tool-calling via webhook, and built-in call analysis (transcript, summary, structured qualification extraction) — no second LLM call needed for qualification. |
 | DB | Postgres via Vercel's native Neon integration (`@neondatabase/serverless`) | Started as SQLite for zero local setup; migrated once deployment made a real persistent DB non-optional anyway (Vercel's filesystem is read-only except an ephemeral `/tmp`). Postgres beat Turso (extra account/CLI for a SQLite-compatible store with no real setup savings) and beat Azure SQL (the author's actual background, but hosted SQL Server needs firewall config for serverless callers with non-static IPs — real time risk under deadline). |
 | Booking | Internal fixed-slot scheduling tool | Real tool-calling loop and real persistence, without spending hours on a Cal.com/Google Calendar OAuth integration. In production this would be the natural next integration. |
-
-### Why not LangGraph
-
-LangGraph earns its keep with multi-step, branching, or looping reasoning —
-an agent that plans, calls a tool, evaluates, and decides what to do next.
-The Builder isn't that: it's one structured-output call per turn. The
-actual multi-turn, tool-calling decision-maker in this system is the voice
-assistant *during the live call* — and that orchestration is handled by
-Vapi itself, not by this codebase. What *would* justify LangGraph later:
-multi-step company research (web search → enrich → draft persona) before
-creating the assistant.
 
 ## Known scope decisions
 
@@ -116,7 +98,6 @@ creating the assistant.
 - **No agent versioning/diff** — editing an assistant overwrites its persona in place.
 - **No "publish" step** — creating/updating an assistant syncs to the voice runtime automatically, in the same request. Sync status (`ready`/`failed`) is shown on the profile card instead.
 - **Free Vapi numbers can't place international calls** (confirmed while testing against an Israeli number) — the Voice Session screen defaults to a **browser call** (Vapi Web Call, WebRTC, no phone/carrier involved) and also offers a real phone-number option for domestic (US) numbers.
-- **The booking tool resolves numbered options, not free-hand dates.** An earlier version asked the assistant to construct the exact ISO datetime itself from whatever the lead said out loud — real testing caught it occasionally speaking one date but storing a different one (an LLM miscalculating a relative date mid-call). Fixed by having `bookMeeting` return up to 3 numbered options and asking the assistant to just echo back the number the lead picked, removing the date-arithmetic step entirely.
 
 ## Running locally
 
