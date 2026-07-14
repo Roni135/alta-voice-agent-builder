@@ -6,6 +6,7 @@ import BuilderChat from './BuilderChat';
 import AssistantProfile from './AssistantProfile';
 import TestCallPanel from './TestCallPanel';
 import CallResult from './CallResult';
+import CallHistory from './CallHistory';
 
 // Orchestrates the 4-screen User Journey: Builder Chat -> Assistant Profile
 // (reveal) -> Test Call -> Call Result, plus a sidebar for switching between
@@ -18,6 +19,9 @@ export default function BuilderApp() {
   const [agent, setAgent] = useState(null);
   const [call, setCall] = useState(null);
   const [sidebarVersion, setSidebarVersion] = useState(0);
+  // Call Result is reachable from finishing a live call OR from picking a
+  // past one in Call History — "back" needs to return to whichever it was.
+  const [resultReturnTo, setResultReturnTo] = useState('profile');
 
   function handleAgentReady(nextAgent) {
     setAgent(nextAgent);
@@ -27,6 +31,13 @@ export default function BuilderApp() {
 
   function handleCallCompleted(finishedCall) {
     setCall(finishedCall);
+    setResultReturnTo('profile');
+    setScreen('result');
+  }
+
+  function handleSelectHistoryCall(pastCall) {
+    setCall(pastCall);
+    setResultReturnTo('history');
     setScreen('result');
   }
 
@@ -76,6 +87,7 @@ export default function BuilderApp() {
             agent={agent}
             onEditInChat={() => setScreen('chat')}
             onTestCall={() => setScreen('test-call')}
+            onViewHistory={() => setScreen('history')}
           />
         )}
 
@@ -87,10 +99,18 @@ export default function BuilderApp() {
           />
         )}
 
+        {screen === 'history' && agent && (
+          <CallHistory
+            agent={agent}
+            onBack={() => setScreen('profile')}
+            onSelectCall={handleSelectHistoryCall}
+          />
+        )}
+
         {screen === 'result' && call && (
           <CallResult
             call={call}
-            onDone={() => setScreen('profile')}
+            onDone={() => setScreen(resultReturnTo)}
           />
         )}
       </div>

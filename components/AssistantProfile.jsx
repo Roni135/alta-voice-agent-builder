@@ -29,7 +29,7 @@ function StatusBadge({ syncStatus }) {
   );
 }
 
-export default function AssistantProfile({ agent, onEditInChat, onTestCall }) {
+export default function AssistantProfile({ agent, onEditInChat, onTestCall, onViewHistory }) {
   const ready = agent.syncStatus === 'ready';
 
   return (
@@ -96,6 +96,10 @@ export default function AssistantProfile({ agent, onEditInChat, onTestCall }) {
           Start Voice Session →
         </button>
       </div>
+
+      <button onClick={onViewHistory} className="text-sm text-zinc-500 hover:underline">
+        View Call History
+      </button>
     </div>
   );
 }

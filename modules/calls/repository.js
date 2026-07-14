@@ -50,6 +50,15 @@ export async function getCallByVapiCallId(vapiCallId) {
   return rowToCall(rows[0]);
 }
 
+// Every call ever made against an agent, most recent first — the call
+// history list. Full rows (not a trimmed summary) so a selected entry can
+// be handed straight to the existing Call Result screen.
+export async function listCallsForAgent(agentId) {
+  await ensureSchema();
+  const rows = await sql`SELECT * FROM calls WHERE agent_id = ${agentId} ORDER BY created_at DESC`;
+  return rows.map(rowToCall);
+}
+
 export async function updateCallResult(id, { status, transcript, summary, qualified, qualificationReason, extractedData }) {
   await ensureSchema();
   await sql`

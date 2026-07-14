@@ -22,12 +22,20 @@ persona and Vapi as the runtime that executes it.
 7. The user starts a voice session (browser call, or a real phone call)
 8. The assistant has the qualification conversation and, if the lead qualifies, books a meeting
 9. The user reviews the outcome: qualified?, meeting booked?, full transcript
+10. Any past call can be revisited later from **Call History** — every lead this assistant has called, with its outcome and summary, not just the one that just happened
 
 A sidebar lists every assistant built so far (Postgres-backed, not just
 browser state) — click one to reopen its profile and continue editing it,
 click **"+ New Agent"** to start a completely separate one, or delete one
 you no longer need. Building multiple assistants doesn't overwrite or lose
 previous ones.
+
+Every call's transcript, summary, and qualification result is written to
+Postgres the moment it completes — but the first version only ever showed
+the one that just happened, with no way to look up a past lead afterward.
+**Call History** (from the profile screen) closes that gap: it lists every
+call an assistant has made, and opens any of them back into the same Call
+Result screen.
 
 ## Architecture
 
@@ -47,12 +55,14 @@ Organized as a modular monolith — one deployable app, internally separated by 
 app/                        # Next.js routes + pages (App Router)
   api/agents                  # List built assistants (sidebar)
   api/agents/[id]               # Fetch one assistant + its chat history
+  api/agents/[id]/calls          # Every call this assistant has made (Call History)
   api/builder                 # Builder Agent endpoint (clarify / create / update)
   api/calls/start              # Places a real outbound phone call
   api/calls/register           # Registers a browser (Web Call) session
   api/calls/[id]                # Poll a call's status/result
   api/webhooks/vapi            # Receives tool-calls (booking) + end-of-call-report
 components/                 # AgentSidebar + the 4 screens: BuilderChat, AssistantProfile, TestCallPanel, CallResult
+  CallHistory.jsx              # Every past call for an assistant, opens into the same Call Result screen
 modules/
   builder/                    # Consultant-style prompt + structured-output schema
   agents/                      # Persona schema, repository (Postgres), persona -> Vapi payload mapper
