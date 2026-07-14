@@ -60,10 +60,15 @@ const BOOK_MEETING_TOOL = {
     parameters: {
       type: 'object',
       properties: {
+        // Vapi's schema validation rejects an integer field with an integer
+        // enum ("each value in enum must be a string") despite that being
+        // valid JSON Schema — string enum works, and resolveChosenSlot()
+        // already coerces this via Number(args.option), so no other change
+        // is needed.
         option: {
-          type: 'integer',
-          enum: [1, 2, 3],
-          description: 'The number (1, 2, or 3) of the option the lead picked. Omit to just list availability.',
+          type: 'string',
+          enum: ['1', '2', '3'],
+          description: 'The number (1, 2, or 3) of the option the lead picked, as a string. Omit to just list availability.',
         },
       },
     },
