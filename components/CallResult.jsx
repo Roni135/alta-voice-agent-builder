@@ -30,6 +30,12 @@ export default function CallResult({ call, onDone }) {
             <p className="text-sm text-zinc-800">
               {call.meetingBooked
                 ? `✅ Booked — ${new Date(call.meetingSlot).toLocaleString('en-US', {
+                    // Pinned to match the server-side formatting in the
+                    // webhook route — slots are generated on the server's
+                    // clock (UTC), so without this the same instant shows
+                    // a different wall-clock time depending on the
+                    // viewer's own timezone.
+                    timeZone: 'UTC',
                     weekday: 'long',
                     month: 'short',
                     day: 'numeric',

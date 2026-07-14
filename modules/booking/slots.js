@@ -4,7 +4,12 @@ import { updateCallBooking } from '@/modules/calls/repository';
 // at 3 times each), but a chosen slot is persisted as a real booking against
 // the Call row. In production this would call Cal.com/Google Calendar
 // instead, behind this same two functions.
-const TIMES_OF_DAY = [10, 14, 16]; // 24h, local server time
+// 24h, server's local clock — Vercel serverless functions run in UTC, so
+// this is effectively 10am/2pm/4pm UTC. Every place that displays a slot
+// must format it with timeZone: 'UTC' to match (see webhooks/vapi/route.js
+// and CallResult.jsx) — otherwise the same instant shows a different
+// wall-clock time depending on the viewer's own timezone.
+const TIMES_OF_DAY = [10, 14, 16];
 
 export function getAvailableSlots() {
   const slots = [];

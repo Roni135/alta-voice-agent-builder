@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import { getCallByVapiCallId, updateCallResult } from '@/modules/calls/repository';
 import { getAvailableSlots, bookSlot } from '@/modules/booking/slots';
 
+// Slots are generated using the server's local clock (Vercel = UTC), so
+// every display of a slot must pin timeZone: 'UTC' explicitly — otherwise
+// this (server-rendered) and CallResult.jsx (browser-rendered) show the
+// same instant at different wall-clock times depending on the viewer's
+// timezone, which is exactly the bug that showed up as "5pm" vs "2pm".
 function formatSlot(iso) {
   return new Date(iso).toLocaleString('en-US', {
+    timeZone: 'UTC',
     weekday: 'long',
     month: 'short',
     day: 'numeric',
