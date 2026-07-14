@@ -36,6 +36,11 @@ async function handleToolCalls(message) {
     const slots = getAvailableSlots();
     const optionIndex = Number(args.option) - 1;
 
+    // Temporary — this is diagnosing a live bug where the assistant never
+    // seems to send a value that resolves to a valid option (1/2/3), and no
+    // exception is thrown either, so the raw payload is otherwise invisible.
+    console.log('[vapi webhook] bookMeeting raw args:', JSON.stringify(rawArgs), 'parsed:', JSON.stringify(args), 'optionIndex:', optionIndex);
+
     if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex > 2) {
       results.push({
         toolCallId: toolCall.id,
